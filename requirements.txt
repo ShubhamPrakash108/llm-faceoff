@@ -1,0 +1,13 @@
+groq==1.2.0
+google-genai==2.6.0
+PyYAML==6.0.2
+python-dotenv==1.0.0
+torch
+transformers
+accelerate
+supabase==2.27.2
+openai==2.38.0
+modal==1.4.3
+uvicorn==0.47.0
+fastapi==0.136.1
+ddgs==9.14.4

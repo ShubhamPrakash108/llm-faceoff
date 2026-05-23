@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Faceoff — Evaluation Dashboard</title>
+    <meta name="description" content="Evaluate and compare AI models on hallucination, bias, and content safety with structured test suites.">
+    <link rel="stylesheet" href="/static/styles.css">
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark-dimmed.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+</head>
+<body>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="chat-layout">
+
+        <!-- ==================== SIDEBAR ==================== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <div class="sidebar-brand-icon">⚡</div>
+                    <span class="sidebar-brand-text">LLM Faceoff</span>
+                </div>
+            </div>
+
+            <div class="sidebar-chats" id="sidebar-chats">
+                <div class="sidebar-section-label">Evaluation History</div>
+                <div id="eval-history-list" style="padding: 0.5rem;"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span class="user-name" id="user-name">User</span>
+                </div>
+                <button class="btn-logout" id="btn-logout">
+                    <span>⏻</span> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- ==================== MAIN EVAL AREA ==================== -->
+        <main class="chat-main">
+
+            <!-- Top Bar with Mode Switcher -->
+            <div class="chat-topbar">
+                <div class="topbar-left">
+                    <button class="btn-menu-toggle" id="btn-menu-toggle" aria-label="Toggle sidebar">☰</button>
+                    <span class="chat-title">Evaluation Dashboard</span>
+                </div>
+                <div class="topbar-right">
+                    <div class="mode-switcher" id="mode-switcher">
+                        <a href="/chat" class="mode-switch-btn" id="mode-btn-talk">
+                            <span>💬</span> Talk
+                        </a>
+                        <a href="/eval" class="mode-switch-btn mode-switch-active" id="mode-btn-eval">
+                            <span>📊</span> Eval
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eval Content Area (scrollable) -->
+            <div class="eval-content" id="eval-content">
+
+                <!-- Setup Section -->
+                <div class="eval-setup" id="eval-setup">
+                    <div class="eval-setup-header">
+                        <div class="eval-setup-icon">📊</div>
+                        <h2>Model Evaluation Suite</h2>
+                        <p>Select two models and run a structured evaluation across hallucination, bias, and content safety benchmarks.</p>
+                    </div>
+
+                    <!-- Model Selection -->
+                    <div class="eval-model-selection">
+                        <div class="eval-model-slot">
+                            <div class="eval-model-label">
+                                <span class="model-type-badge badge-frontier">Frontier</span>
+                                <span>Model A</span>
+                            </div>
+                            <select class="model-selector" id="eval-model-a" aria-label="Select Model A for evaluation">
+                                <option value="" disabled selected>Loading…</option>
+                            </select>
+                        </div>
+                        <div class="eval-vs">VS</div>
+                        <div class="eval-model-slot">
+                            <div class="eval-model-label">
+                                <span class="model-type-badge badge-oss">OSS</span>
+                                <span>Model B</span>
+                            </div>
+                            <select class="model-selector" id="eval-model-b" aria-label="Select Model B for evaluation">
+                                <option value="" disabled selected>Loading…</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Category Selection -->
+                    <div class="eval-categories">
+                        <div class="eval-category-label">Select Categories to Evaluate:</div>
+                        <div class="eval-category-chips">
+                            <label class="eval-category-chip active" id="chip-hallucination">
+                                <input type="checkbox" value="hallucination" checked>
+                                <span class="chip-icon">🔍</span>
+                                <span>Hallucination</span>
+                            </label>
+                            <label class="eval-category-chip active" id="chip-bias">
+                                <input type="checkbox" value="bias" checked>
+                                <span class="chip-icon">⚖️</span>
+                                <span>Bias & Harmful</span>
+                            </label>
+                            <label class="eval-category-chip active" id="chip-content_safety">
+                                <input type="checkbox" value="content_safety" checked>
+                                <span class="chip-icon">🛡️</span>
+                                <span>Content Safety</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Run Button -->
+                    <button class="btn btn-primary eval-run-btn" id="btn-run-eval">
+                        <span id="eval-run-text">🚀 Run Evaluation</span>
+                        <div class="spinner" id="eval-run-spinner" style="display:none;"></div>
+                    </button>
+                </div>
+
+                <!-- Progress Section (shown during eval) -->
+                <div class="eval-progress" id="eval-progress" style="display:none;">
+                    <div class="eval-progress-header">
+                        <h3>⏳ Evaluation in Progress</h3>
+                        <p id="eval-progress-text">Evaluating prompt 0 of 0...</p>
+                    </div>
+                    <div class="eval-progress-bar-wrapper">
+                        <div class="eval-progress-bar" id="eval-progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="eval-progress-log" id="eval-progress-log"></div>
+                </div>
+
+                <!-- Results Section (shown after eval) -->
+                <div class="eval-results" id="eval-results" style="display:none;">
+                    
+                    <!-- Overall Scores -->
+                    <div class="eval-results-header">
+                        <h2>📋 Evaluation Results</h2>
+                        <button class="btn-clear-chat" id="btn-export-results" title="Export results as JSON">📥 Export JSON</button>
+                    </div>
+
+                    <!-- Overall Score Cards -->
+                    <div class="eval-score-overview">
+                        <div class="eval-score-card eval-score-card-a">
+                            <div class="eval-score-card-header">
+                                <span class="model-type-badge badge-frontier">Frontier</span>
+                                <span class="eval-score-model-name" id="result-model-a-name">Model A</span>
+                            </div>
+                            <div class="eval-score-big" id="result-model-a-score">0.0</div>
+                            <div class="eval-score-label">Overall Score</div>
+                            <div class="eval-score-bar-container">
+                                <div class="eval-score-bar eval-score-bar-a" id="result-bar-a" style="width:0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="eval-score-vs">VS</div>
+
+                        <div class="eval-score-card eval-score-card-b">
+                            <div class="eval-score-card-header">
+                                <span class="model-type-badge badge-oss">OSS</span>
+                                <span class="eval-score-model-name" id="result-model-b-name">Model B</span>
+                            </div>
+                            <div class="eval-score-big" id="result-model-b-score">0.0</div>
+                            <div class="eval-score-label">Overall Score</div>
+                            <div class="eval-score-bar-container">
+                                <div class="eval-score-bar eval-score-bar-b" id="result-bar-b" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Winner Banner -->
+                    <div class="eval-winner-banner" id="eval-winner-banner" style="display:none;">
+                        <span class="eval-winner-icon">🏆</span>
+                        <span class="eval-winner-text" id="eval-winner-text">Model A wins!</span>
+                    </div>
+
+                    <!-- Category Breakdown -->
+                    <div class="eval-category-breakdown" id="eval-category-breakdown">
+                        <h3>Category Breakdown</h3>
+                        <div class="eval-breakdown-grid" id="eval-breakdown-grid"></div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div class="eval-recommendations" id="eval-recommendations">
+                        <h3>📝 Recommendations</h3>
+                        <div class="eval-recommendations-content" id="eval-recommendations-content"></div>
+                    </div>
+
+                    <!-- Detailed Results Accordion -->
+                    <div class="eval-detailed" id="eval-detailed">
+                        <h3>Detailed Prompt Results</h3>
+                        <div class="eval-accordion" id="eval-accordion"></div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        // ===================== AUTH GUARD =====================
+        const currentUser = sessionStorage.getItem('llm_user');
+        if (!currentUser) { window.location.href = '/'; return; }
+
+        // ===================== DOM REFS =====================
+        const sidebar        = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const btnMenuToggle  = document.getElementById('btn-menu-toggle');
+        const btnLogout      = document.getElementById('btn-logout');
+        const userName       = document.getElementById('user-name');
+        const userAvatar     = document.getElementById('user-avatar');
+        const evalModelA     = document.getElementById('eval-model-a');
+        const evalModelB     = document.getElementById('eval-model-b');
+        const btnRunEval     = document.getElementById('btn-run-eval');
+        const evalRunText    = document.getElementById('eval-run-text');
+        const evalRunSpinner = document.getElementById('eval-run-spinner');
+        const evalSetup      = document.getElementById('eval-setup');
+        const evalProgress   = document.getElementById('eval-progress');
+        const evalResults    = document.getElementById('eval-results');
+        const progressText   = document.getElementById('eval-progress-text');
+        const progressBar    = document.getElementById('eval-progress-bar');
+        const progressLog    = document.getElementById('eval-progress-log');
+        const btnExport      = document.getElementById('btn-export-results');
+        const evalHistoryList = document.getElementById('eval-history-list');
+
+        const API_BASE = window.location.origin;
+
+        // ===================== STATE =====================
+        let allModelsData = {};
+        let evalPrompts = {};
+        let evalResultsData = null;
+        let isRunning = false;
+        let evalHistory = [];
+
+        // ===================== INIT =====================
+        userName.textContent = currentUser;
+        userAvatar.textContent = currentUser.charAt(0).toUpperCase();
+
+        // ---- Fetch Models ----
+        async function fetchModels() {
+            try {
+                const res = await fetch(`${API_BASE}/api/models`);
+                allModelsData = await res.json();
+                populateSelector(evalModelA, 'frontier');
+                populateSelector(evalModelB, 'oss');
+            } catch (err) {
+                console.error('Failed to fetch models:', err);
+            }
+        }
+
+        function populateSelector(select, defaultType) {
+            const groupMapping = {
+                "api_gemini":     "🌐 Frontier — Gemini",
+                "api_groq":       "🌐 Frontier — Groq",
+                "oss_serverless": "🟢 OSS — Serverless (Modal)",
+                "oss_local":      "🟢 OSS — Local (HuggingFace)"
+            };
+
+            const frontierModels = [
+                ...(allModelsData.api_gemini || []),
+                ...(allModelsData.api_groq || [])
+            ];
+            const ossModels = [
+                ...(allModelsData.oss_serverless || []),
+                ...(allModelsData.oss_local || [])
+            ];
+
+            select.innerHTML = '';
+            for (const [key, models] of Object.entries(allModelsData)) {
+                if (models && models.length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = groupMapping[key] || key;
+                    models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        optgroup.appendChild(option);
+                    });
+                    select.appendChild(optgroup);
+                }
+            }
+
+            // Smart defaults
+            if (defaultType === 'frontier' && frontierModels.length > 0) {
+                select.value = frontierModels[0];
+            } else if (defaultType === 'oss' && ossModels.length > 0) {
+                select.value = ossModels[0];
+            }
+        }
+
+        // ---- Fetch Eval Prompts ----
+        async function fetchEvalPrompts() {
+            try {
+                const res = await fetch(`${API_BASE}/api/eval/prompts`);
+                const data = await res.json();
+                if (data.success) {
+                    evalPrompts = data.prompts;
+                }
+            } catch (err) {
+                console.error('Failed to fetch eval prompts:', err);
+            }
+        }
+
+        // ===================== CATEGORY CHIPS =====================
+        document.querySelectorAll('.eval-category-chip input').forEach(cb => {
+            cb.addEventListener('change', () => {
+                cb.closest('.eval-category-chip').classList.toggle('active', cb.checked);
+            });
+        });
+
+        function getSelectedCategories() {
+            const cats = [];
+            document.querySelectorAll('.eval-category-chip input:checked').forEach(cb => {
+                cats.push(cb.value);
+            });
+            return cats;
+        }
+
+        // ===================== RUN EVALUATION =====================
+        btnRunEval.addEventListener('click', runEvaluation);
+
+        async function runEvaluation() {
+            if (isRunning) return;
+
+            const modelA = evalModelA.value;
+            const modelB = evalModelB.value;
+            const categories = getSelectedCategories();
+
+            if (!modelA || !modelB) {
+                alert('Please select both models.');
+                return;
+            }
+            if (categories.length === 0) {
+                alert('Please select at least one category.');
+                return;
+            }
+
+            isRunning = true;
+            evalRunText.style.display = 'none';
+            evalRunSpinner.style.display = 'block';
+            btnRunEval.disabled = true;
+
+            // Collect all prompts to run
+            let allPrompts = [];
+            categories.forEach(cat => {
+                if (evalPrompts[cat]) {
+                    evalPrompts[cat].forEach(p => {
+                        allPrompts.push({ ...p, evalCategory: cat });
+                    });
+                }
+            });
+
+            const totalPrompts = allPrompts.length;
+
+            // Show progress
+            evalSetup.style.display = 'none';
+            evalResults.style.display = 'none';
+            evalProgress.style.display = 'block';
+            progressLog.innerHTML = '';
+            progressBar.style.width = '0%';
+            progressText.textContent = `Evaluating prompt 0 of ${totalPrompts}...`;
+
+            // Results storage
+            const results = {
+                model_a: modelA,
+                model_b: modelB,
+                timestamp: new Date().toISOString(),
+                categories: {},
+                prompts: []
+            };
+
+            // Run each prompt sequentially
+            for (let i = 0; i < allPrompts.length; i++) {
+                const p = allPrompts[i];
+                progressText.textContent = `Evaluating prompt ${i + 1} of ${totalPrompts}...`;
+                progressBar.style.width = `${((i) / totalPrompts) * 100}%`;
+
+                // Add log entry
+                const logEntry = document.createElement('div');
+                logEntry.className = 'eval-log-entry';
+                logEntry.innerHTML = `<span class="eval-log-spinner"></span> <span class="eval-log-cat">[${p.evalCategory}]</span> ${escapeHTML(p.prompt.substring(0, 60))}…`;
+                progressLog.appendChild(logEntry);
+                progressLog.scrollTop = progressLog.scrollHeight;
+
+                try {
+                    const body = {
+                        model_a: modelA,
+                        model_b: modelB,
+                        prompt: p.prompt,
+                        category: p.evalCategory
+                    };
+                    if (p.ground_truth) body.ground_truth = p.ground_truth;
+                    if (p.expected_behavior) body.expected_behavior = p.expected_behavior;
+
+                    const res = await fetch(`${API_BASE}/api/eval/single`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        results.prompts.push(data);
+                        logEntry.innerHTML = `<span class="eval-log-done">✓</span> <span class="eval-log-cat">[${p.evalCategory}]</span> A: ${data.model_a.score}/10 | B: ${data.model_b.score}/10`;
+                    } else {
+                        logEntry.innerHTML = `<span class="eval-log-fail">✗</span> <span class="eval-log-cat">[${p.evalCategory}]</span> Error`;
+                    }
+                } catch (err) {
+                    logEntry.innerHTML = `<span class="eval-log-fail">✗</span> <span class="eval-log-cat">[${p.evalCategory}]</span> ${escapeHTML(err.message)}`;
+                }
+            }
+
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Evaluation complete!';
+
+            // Process results
+            evalResultsData = processResults(results);
+
+            // Store in history
+            evalHistory.unshift({
+                id: Date.now(),
+                title: `${modelA.split('/').pop()} vs ${modelB.split('/').pop()}`,
+                timestamp: results.timestamp,
+                data: evalResultsData
+            });
+            renderHistory();
+
+            // Show results after short delay
+            setTimeout(() => {
+                evalProgress.style.display = 'none';
+                displayResults(evalResultsData);
+            }, 800);
+
+            isRunning = false;
+            evalRunText.style.display = 'inline';
+            evalRunSpinner.style.display = 'none';
+            btnRunEval.disabled = false;
+        }
+
+        // ===================== PROCESS RESULTS =====================
+        function processResults(raw) {
+            const categoryScores = {};
+            const categories = new Set();
+
+            raw.prompts.forEach(p => {
+                categories.add(p.category);
+                if (!categoryScores[p.category]) {
+                    categoryScores[p.category] = { a_scores: [], b_scores: [], prompts: [] };
+                }
+                const scoreA = p.model_a.score >= 0 ? p.model_a.score : 0;
+                const scoreB = p.model_b.score >= 0 ? p.model_b.score : 0;
+                categoryScores[p.category].a_scores.push(scoreA);
+                categoryScores[p.category].b_scores.push(scoreB);
+                categoryScores[p.category].prompts.push(p);
+            });
+
+            // Calculate averages
+            const catResults = {};
+            let totalA = 0, totalB = 0, totalCount = 0;
+
+            for (const [cat, data] of Object.entries(categoryScores)) {
+                const avgA = data.a_scores.reduce((s, v) => s + v, 0) / data.a_scores.length;
+                const avgB = data.b_scores.reduce((s, v) => s + v, 0) / data.b_scores.length;
+                catResults[cat] = {
+                    avg_a: avgA,
+                    avg_b: avgB,
+                    prompts: data.prompts
+                };
+                totalA += avgA;
+                totalB += avgB;
+                totalCount++;
+            }
+
+            const overallA = totalCount > 0 ? totalA / totalCount : 0;
+            const overallB = totalCount > 0 ? totalB / totalCount : 0;
+
+            return {
+                model_a: raw.model_a,
+                model_b: raw.model_b,
+                timestamp: raw.timestamp,
+                overall_a: overallA,
+                overall_b: overallB,
+                categories: catResults,
+                raw_prompts: raw.prompts
+            };
+        }
+
+        // ===================== DISPLAY RESULTS =====================
+        function displayResults(data) {
+            evalResults.style.display = 'block';
+
+            // Model names
+            document.getElementById('result-model-a-name').textContent = data.model_a;
+            document.getElementById('result-model-b-name').textContent = data.model_b;
+
+            // Overall scores (animated)
+            animateScore('result-model-a-score', data.overall_a);
+            animateScore('result-model-b-score', data.overall_b);
+
+            // Score bars
+            document.getElementById('result-bar-a').style.width = `${data.overall_a * 10}%`;
+            document.getElementById('result-bar-b').style.width = `${data.overall_b * 10}%`;
+
+            // Winner banner
+            const winnerBanner = document.getElementById('eval-winner-banner');
+            const winnerText = document.getElementById('eval-winner-text');
+            if (data.overall_a > data.overall_b) {
+                winnerText.textContent = `${data.model_a} wins with ${data.overall_a.toFixed(1)} vs ${data.overall_b.toFixed(1)}!`;
+                winnerBanner.style.display = 'flex';
+                winnerBanner.className = 'eval-winner-banner winner-a';
+            } else if (data.overall_b > data.overall_a) {
+                winnerText.textContent = `${data.model_b} wins with ${data.overall_b.toFixed(1)} vs ${data.overall_a.toFixed(1)}!`;
+                winnerBanner.style.display = 'flex';
+                winnerBanner.className = 'eval-winner-banner winner-b';
+            } else {
+                winnerText.textContent = `It's a tie at ${data.overall_a.toFixed(1)}!`;
+                winnerBanner.style.display = 'flex';
+                winnerBanner.className = 'eval-winner-banner winner-tie';
+            }
+
+            // Category breakdown
+            renderCategoryBreakdown(data);
+
+            // Recommendations
+            renderRecommendations(data);
+
+            // Detailed accordion
+            renderDetailedResults(data);
+
+            // Scroll to results
+            evalResults.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function animateScore(elementId, targetValue) {
+            const el = document.getElementById(elementId);
+            let current = 0;
+            const step = targetValue / 30;
+            const interval = setInterval(() => {
+                current += step;
+                if (current >= targetValue) {
+                    current = targetValue;
+                    clearInterval(interval);
+                }
+                el.textContent = current.toFixed(1);
+            }, 30);
+        }
+
+        function renderCategoryBreakdown(data) {
+            const grid = document.getElementById('eval-breakdown-grid');
+            grid.innerHTML = '';
+
+            const catLabels = {
+                'hallucination': { icon: '🔍', label: 'Hallucination', desc: 'Factual accuracy' },
+                'bias': { icon: '⚖️', label: 'Bias & Harmful', desc: 'Stereotype resistance' },
+                'content_safety': { icon: '🛡️', label: 'Content Safety', desc: 'Jailbreak resistance' }
+            };
+
+            for (const [cat, scores] of Object.entries(data.categories)) {
+                const info = catLabels[cat] || { icon: '📋', label: cat, desc: '' };
+                const card = document.createElement('div');
+                card.className = 'eval-breakdown-card';
+                
+                const winnerClass = scores.avg_a > scores.avg_b ? 'winner-a-highlight' : 
+                                    scores.avg_b > scores.avg_a ? 'winner-b-highlight' : '';
+
+                card.innerHTML = `
+                    <div class="eval-breakdown-header">
+                        <span class="eval-breakdown-icon">${info.icon}</span>
+                        <div>
+                            <div class="eval-breakdown-title">${info.label}</div>
+                            <div class="eval-breakdown-desc">${info.desc}</div>
+                        </div>
+                    </div>
+                    <div class="eval-breakdown-scores">
+                        <div class="eval-breakdown-model ${scores.avg_a >= scores.avg_b ? 'eval-score-winner' : ''}">
+                            <div class="eval-breakdown-model-label">Model A</div>
+                            <div class="eval-breakdown-model-score">${scores.avg_a.toFixed(1)}</div>
+                            <div class="eval-breakdown-model-bar-wrap">
+                                <div class="eval-breakdown-model-bar bar-a" style="width:${scores.avg_a * 10}%"></div>
+                            </div>
+                        </div>
+                        <div class="eval-breakdown-model ${scores.avg_b >= scores.avg_a ? 'eval-score-winner' : ''}">
+                            <div class="eval-breakdown-model-label">Model B</div>
+                            <div class="eval-breakdown-model-score">${scores.avg_b.toFixed(1)}</div>
+                            <div class="eval-breakdown-model-bar-wrap">
+                                <div class="eval-breakdown-model-bar bar-b" style="width:${scores.avg_b * 10}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderRecommendations(data) {
+            const content = document.getElementById('eval-recommendations-content');
+            let recs = [];
+
+            // Overall recommendation
+            if (data.overall_a > data.overall_b) {
+                recs.push(`<div class="eval-rec-item rec-positive"><span class="rec-icon">✅</span> <strong>${data.model_a}</strong> (Frontier) outperforms <strong>${data.model_b}</strong> (OSS) overall with a score of ${data.overall_a.toFixed(1)} vs ${data.overall_b.toFixed(1)}.</div>`);
+            } else if (data.overall_b > data.overall_a) {
+                recs.push(`<div class="eval-rec-item rec-positive"><span class="rec-icon">✅</span> <strong>${data.model_b}</strong> (OSS) outperforms <strong>${data.model_a}</strong> (Frontier) overall with a score of ${data.overall_b.toFixed(1)} vs ${data.overall_a.toFixed(1)}.</div>`);
+            }
+
+            // Per-category insights
+            for (const [cat, scores] of Object.entries(data.categories)) {
+                const diff = Math.abs(scores.avg_a - scores.avg_b);
+                const catName = cat === 'hallucination' ? 'Hallucination' :
+                               cat === 'bias' ? 'Bias & Harmful Outputs' : 'Content Safety';
+
+                if (diff > 2) {
+                    const winner = scores.avg_a > scores.avg_b ? data.model_a : data.model_b;
+                    const loser = scores.avg_a > scores.avg_b ? data.model_b : data.model_a;
+                    recs.push(`<div class="eval-rec-item rec-warning"><span class="rec-icon">⚠️</span> Significant gap in <strong>${catName}</strong>: ${winner} scores ${Math.max(scores.avg_a, scores.avg_b).toFixed(1)} while ${loser} only achieves ${Math.min(scores.avg_a, scores.avg_b).toFixed(1)}. Consider this for safety-critical applications.</div>`);
+                }
+
+                if (scores.avg_a < 5 && scores.avg_b < 5) {
+                    recs.push(`<div class="eval-rec-item rec-danger"><span class="rec-icon">🚨</span> Both models score below 5 on <strong>${catName}</strong>. Neither is recommended for production use in this area without additional guardrails.</div>`);
+                }
+            }
+
+            if (recs.length === 0) {
+                recs.push(`<div class="eval-rec-item rec-neutral"><span class="rec-icon">ℹ️</span> Both models performed comparably across all categories. Consider cost, latency, and deployment complexity as differentiators.</div>`);
+            }
+
+            content.innerHTML = recs.join('');
+        }
+
+        function renderDetailedResults(data) {
+            const accordion = document.getElementById('eval-accordion');
+            accordion.innerHTML = '';
+
+            const catLabels = {
+                'hallucination': '🔍 Hallucination',
+                'bias': '⚖️ Bias & Harmful',
+                'content_safety': '🛡️ Content Safety'
+            };
+
+            for (const [cat, catData] of Object.entries(data.categories)) {
+                catData.prompts.forEach((result, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'eval-accordion-item';
+
+                    const scoreA = result.model_a.score;
+                    const scoreB = result.model_b.score;
+                    const scoreDiff = scoreA - scoreB;
+                    const diffLabel = scoreDiff > 0 ? `A+${scoreDiff}` : 
+                                     scoreDiff < 0 ? `B+${Math.abs(scoreDiff)}` : 'Tie';
+                    const diffClass = scoreDiff > 0 ? 'diff-a' : scoreDiff < 0 ? 'diff-b' : 'diff-tie';
+
+                    item.innerHTML = `
+                        <div class="eval-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                            <div class="eval-accordion-title">
+                                <span class="eval-accordion-cat">${catLabels[cat] || cat}</span>
+                                <span class="eval-accordion-prompt">${escapeHTML(result.prompt.substring(0, 80))}${result.prompt.length > 80 ? '…' : ''}</span>
+                            </div>
+                            <div class="eval-accordion-scores-preview">
+                                <span class="score-pill pill-a">${scoreA}/10</span>
+                                <span class="score-pill pill-diff ${diffClass}">${diffLabel}</span>
+                                <span class="score-pill pill-b">${scoreB}/10</span>
+                                <span class="eval-accordion-chevron">▸</span>
+                            </div>
+                        </div>
+                        <div class="eval-accordion-body">
+                            <div class="eval-accordion-prompt-full">
+                                <strong>Prompt:</strong> ${escapeHTML(result.prompt)}
+                            </div>
+                            <div class="eval-accordion-responses">
+                                <div class="eval-accordion-response response-a">
+                                    <div class="response-header">
+                                        <span class="model-type-badge badge-frontier">Model A</span>
+                                        <span class="response-score">Score: ${scoreA}/10</span>
+                                    </div>
+                                    <div class="response-text">${escapeHTML(result.model_a.response)}</div>
+                                    <div class="response-reasoning"><strong>Judge:</strong> ${escapeHTML(result.model_a.reasoning)}</div>
+                                </div>
+                                <div class="eval-accordion-response response-b">
+                                    <div class="response-header">
+                                        <span class="model-type-badge badge-oss">Model B</span>
+                                        <span class="response-score">Score: ${scoreB}/10</span>
+                                    </div>
+                                    <div class="response-text">${escapeHTML(result.model_b.response)}</div>
+                                    <div class="response-reasoning"><strong>Judge:</strong> ${escapeHTML(result.model_b.reasoning)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    accordion.appendChild(item);
+                });
+            }
+        }
+
+        // ===================== EXPORT =====================
+        btnExport.addEventListener('click', () => {
+            if (!evalResultsData) return;
+            const blob = new Blob([JSON.stringify(evalResultsData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eval-results-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // ===================== HISTORY =====================
+        function renderHistory() {
+            evalHistoryList.innerHTML = '';
+            if (evalHistory.length === 0) {
+                evalHistoryList.innerHTML = '<div style="padding: 0.5rem; font-size: 0.82rem; color: var(--text-muted); text-align: center;">No evaluations yet</div>';
+                return;
+            }
+            evalHistory.forEach((item, idx) => {
+                const el = document.createElement('div');
+                el.className = 'chat-history-item';
+                el.innerHTML = `
+                    <span class="chat-item-icon">📊</span>
+                    <span class="chat-item-text">${escapeHTML(item.title)}</span>
+                `;
+                el.addEventListener('click', () => {
+                    evalSetup.style.display = 'none';
+                    evalProgress.style.display = 'none';
+                    displayResults(item.data);
+                });
+                evalHistoryList.appendChild(el);
+            });
+        }
+
+        // ===================== NEW EVAL =====================
+        function showSetup() {
+            evalSetup.style.display = 'block';
+            evalProgress.style.display = 'none';
+            evalResults.style.display = 'none';
+        }
+
+        // ===================== UI HELPERS =====================
+        function escapeHTML(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ---- Sidebar Toggle ----
+        btnMenuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('visible');
+        });
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('visible');
+        });
+
+        // ---- Logout ----
+        btnLogout.addEventListener('click', () => {
+            sessionStorage.removeItem('llm_user');
+            sessionStorage.removeItem('llm_mode');
+            window.location.href = '/';
+        });
+
+        // ===================== BOOT =====================
+        fetchModels();
+        fetchEvalPrompts();
+        renderHistory();
+
+    })();
+    </script>
+</body>
+</html>

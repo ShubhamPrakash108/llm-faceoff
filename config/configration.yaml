@@ -1,0 +1,18 @@
+models:
+  api_call:
+    gemini:
+      - gemini-3.1-flash-lite
+      - gemini-3.5-flash
+          
+    groq:
+      - llama-3.3-70b-versatile
+      - openai/gpt-oss-120b
+      - openai/gpt-oss-20b
+
+  oss_models:
+    - Qwen/Qwen3-0.6B
+    - Qwen/Qwen2.5-0.5B
+  
+  serverless_models:
+    - Qwen/Qwen2.5-7B-Instruct
+    - mistralai/Mistral-7B-Instruct-v0.2

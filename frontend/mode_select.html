@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Faceoff — Choose Mode</title>
+    <meta name="description" content="Choose between Talk mode to chat with AI assistants or Eval mode to evaluate and compare models on safety, bias, and accuracy.">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-page">
+
+    <div class="mode-select-container">
+        <!-- Header -->
+        <div class="mode-select-header">
+            <div class="auth-logo">
+                <div class="auth-logo-icon">⚡</div>
+                <span class="auth-logo-text">LLM Faceoff</span>
+            </div>
+            <h1>What would you like to do?</h1>
+            <p class="mode-select-subtitle">Choose your experience below. You can switch anytime.</p>
+        </div>
+
+        <!-- Mode Cards -->
+        <div class="mode-cards">
+            <!-- Talk Card -->
+            <div class="mode-card" id="mode-card-talk" tabindex="0" role="button" aria-label="Enter Talk mode">
+                <div class="mode-card-glow mode-card-glow-talk"></div>
+                <div class="mode-card-icon">💬</div>
+                <h2>Talk</h2>
+                <p>Chat with AI assistants side-by-side. Compare frontier and open-source models in real-time multi-turn conversations.</p>
+                <div class="mode-card-features">
+                    <span class="mode-feature-tag">Multi-turn Chat</span>
+                    <span class="mode-feature-tag">Side-by-Side</span>
+                    <span class="mode-feature-tag">Memory</span>
+                </div>
+                <div class="mode-card-action">
+                    <span>Start Chatting</span>
+                    <span class="mode-card-arrow">→</span>
+                </div>
+            </div>
+
+            <!-- Eval Card -->
+            <div class="mode-card" id="mode-card-eval" tabindex="0" role="button" aria-label="Enter Eval mode">
+                <div class="mode-card-glow mode-card-glow-eval"></div>
+                <div class="mode-card-icon">📊</div>
+                <h2>Evaluate</h2>
+                <p>Run structured evaluations comparing models on hallucination, bias, and content safety with scored results and insights.</p>
+                <div class="mode-card-features">
+                    <span class="mode-feature-tag">Hallucination</span>
+                    <span class="mode-feature-tag">Bias Detection</span>
+                    <span class="mode-feature-tag">Safety</span>
+                </div>
+                <div class="mode-card-action">
+                    <span>Start Evaluating</span>
+                    <span class="mode-card-arrow">→</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mode-select-footer">
+            <span>Signed in as <strong id="mode-user-name">User</strong></span>
+            <a href="#" id="mode-sign-out">Sign out</a>
+        </div>
+    </div>
+
+    <script>
+        // Auth guard
+        const currentUser = sessionStorage.getItem('llm_user');
+        if (!currentUser) { window.location.href = '/'; }
+
+        document.getElementById('mode-user-name').textContent = currentUser;
+
+        // Card click handlers
+        document.getElementById('mode-card-talk').addEventListener('click', () => {
+            sessionStorage.setItem('llm_mode', 'talk');
+            window.location.href = '/chat';
+        });
+
+        document.getElementById('mode-card-eval').addEventListener('click', () => {
+            sessionStorage.setItem('llm_mode', 'eval');
+            window.location.href = '/eval';
+        });
+
+        // Keyboard accessibility
+        document.querySelectorAll('.mode-card').forEach(card => {
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    card.click();
+                }
+            });
+        });
+
+        // Sign out
+        document.getElementById('mode-sign-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            sessionStorage.removeItem('llm_user');
+            sessionStorage.removeItem('llm_mode');
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>

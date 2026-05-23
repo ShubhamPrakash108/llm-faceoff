@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Faceoff — Sign In</title>
+    <meta name="description" content="Sign in to LLM Faceoff to compare open-source and frontier AI personal assistants side by side.">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-page">
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Header -->
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <div class="auth-logo-icon">⚡</div>
+                    <span class="auth-logo-text">LLM Faceoff</span>
+                </div>
+                <h1 id="auth-heading">Welcome back</h1>
+                <p id="auth-subheading">Sign in to continue to your AI assistants</p>
+            </div>
+
+            <!-- Feedback Messages -->
+            <div class="auth-error" id="auth-error" role="alert"></div>
+            <div class="auth-success" id="auth-success" role="status"></div>
+
+            <!-- Form -->
+            <form class="auth-form" id="auth-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="auth-username">Username</label>
+                    <input type="text" class="form-input" id="auth-username" placeholder="Enter your username" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="auth-password">Password</label>
+                    <input type="password" class="form-input" id="auth-password" placeholder="Enter your password" required>
+                </div>
+
+                <div class="form-group" id="confirm-password-group" style="display: none;">
+                    <label for="auth-confirm-password">Confirm Password</label>
+                    <input type="password" class="form-input" id="auth-confirm-password" placeholder="Confirm your password">
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="auth-submit-btn">
+                    <span id="btn-text">Sign In</span>
+                    <div class="spinner" id="btn-spinner" style="display: none;"></div>
+                </button>
+            </form>
+
+            <!-- Toggle Login / Register -->
+            <div class="auth-footer" id="auth-footer">
+                Don't have an account? <a href="#" id="auth-toggle">Create one</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---- State ----
+        let isLoginMode = true;
+        const API_BASE = window.location.origin;
+
+        // ---- DOM Elements ----
+        const form           = document.getElementById('auth-form');
+        const heading        = document.getElementById('auth-heading');
+        const subheading     = document.getElementById('auth-subheading');
+        const usernameInput  = document.getElementById('auth-username');
+        const passwordInput  = document.getElementById('auth-password');
+        const confirmGroup   = document.getElementById('confirm-password-group');
+        const confirmInput   = document.getElementById('auth-confirm-password');
+        const submitBtn      = document.getElementById('auth-submit-btn');
+        const btnText        = document.getElementById('btn-text');
+        const btnSpinner     = document.getElementById('btn-spinner');
+        const toggleLink     = document.getElementById('auth-toggle');
+        const footer         = document.getElementById('auth-footer');
+        const errorBox       = document.getElementById('auth-error');
+        const successBox     = document.getElementById('auth-success');
+
+        // ---- Helpers ----
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.classList.add('visible');
+            successBox.classList.remove('visible');
+        }
+        function showSuccess(msg) {
+            successBox.textContent = msg;
+            successBox.classList.add('visible');
+            errorBox.classList.remove('visible');
+        }
+        function clearMessages() {
+            errorBox.classList.remove('visible');
+            successBox.classList.remove('visible');
+        }
+        function setLoading(loading) {
+            submitBtn.disabled = loading;
+            btnText.style.display = loading ? 'none' : 'inline';
+            btnSpinner.style.display = loading ? 'block' : 'none';
+        }
+
+        // ---- Toggle Mode ----
+        toggleLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            clearMessages();
+            isLoginMode = !isLoginMode;
+
+            if (isLoginMode) {
+                heading.textContent = 'Welcome back';
+                subheading.textContent = 'Sign in to continue to your AI assistants';
+                btnText.textContent = 'Sign In';
+                footer.innerHTML = 'Don\'t have an account? <a href="#" id="auth-toggle">Create one</a>';
+                confirmGroup.style.display = 'none';
+                confirmInput.removeAttribute('required');
+            } else {
+                heading.textContent = 'Create an account';
+                subheading.textContent = 'Get started with LLM Faceoff';
+                btnText.textContent = 'Create Account';
+                footer.innerHTML = 'Already have an account? <a href="#" id="auth-toggle">Sign in</a>';
+                confirmGroup.style.display = 'flex';
+                confirmInput.setAttribute('required', 'true');
+            }
+
+            // Re-attach toggle listener
+            document.getElementById('auth-toggle').addEventListener('click', arguments.callee.bind(null, e));
+            // Re-bind the toggle listener properly
+            document.getElementById('auth-toggle').addEventListener('click', (ev) => {
+                ev.preventDefault();
+                toggleLink.click();
+            });
+        });
+
+        // ---- Form Submit ----
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearMessages();
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!username || !password) {
+                showError('Please fill in all fields.');
+                return;
+            }
+
+            if (!isLoginMode) {
+                const confirmPassword = confirmInput.value.trim();
+                if (password !== confirmPassword) {
+                    showError('Passwords do not match.');
+                    return;
+                }
+                if (password.length < 4) {
+                    showError('Password must be at least 4 characters.');
+                    return;
+                }
+            }
+
+            setLoading(true);
+
+            const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: username, password: password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Something went wrong.');
+                }
+
+                if (isLoginMode) {
+                    // Store user & redirect to mode selection
+                    sessionStorage.setItem('llm_user', username);
+                    window.location.href = '/mode-select';
+                } else {
+                    showSuccess('Account created! Redirecting to sign in...');
+                    setTimeout(() => {
+                        isLoginMode = true;
+                        heading.textContent = 'Welcome back';
+                        subheading.textContent = 'Sign in to continue to your AI assistants';
+                        btnText.textContent = 'Sign In';
+                        footer.innerHTML = 'Don\'t have an account? <a href="#" id="auth-toggle">Create one</a>';
+                        confirmGroup.style.display = 'none';
+                        clearMessages();
+                        // Re-bind toggle
+                        document.getElementById('auth-toggle').addEventListener('click', (ev) => {
+                            ev.preventDefault();
+                            toggleLink.click();
+                        });
+                    }, 1500);
+                }
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // ---- Auto-redirect if already logged in ----
+        if (sessionStorage.getItem('llm_user')) {
+            window.location.href = '/mode-select';
+        }
+    </script>
+</body>
+</html>

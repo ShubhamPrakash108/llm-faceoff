@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Faceoff — Compare AI Assistants</title>
+    <meta name="description" content="Compare open-source and frontier AI personal assistants side by side with the same prompts.">
+    <link rel="stylesheet" href="/static/styles.css">
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark-dimmed.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+</head>
+<body>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="chat-layout">
+
+        <!-- ==================== SIDEBAR ==================== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <div class="sidebar-brand-icon">⚡</div>
+                    <span class="sidebar-brand-text">LLM Faceoff</span>
+                </div>
+                <button class="btn-new-chat" id="btn-new-chat">
+                    <span>＋</span>
+                    <span>New Faceoff</span>
+                </button>
+            </div>
+
+            <div class="sidebar-chats" id="sidebar-chats">
+                <div class="sidebar-section-label">Faceoff History</div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="memory-indicator" id="memory-indicator" title="Long-term memory facts stored about you">
+                    <span>🧠</span>
+                    <span>Memory</span>
+                    <span class="memory-count" id="memory-count">0 facts</span>
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span class="user-name" id="user-name">User</span>
+                </div>
+                <button class="btn-logout" id="btn-logout">
+                    <span>⏻</span> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- ==================== MAIN CHAT ==================== -->
+        <main class="chat-main">
+
+            <!-- Top Bar -->
+            <div class="chat-topbar">
+                <div class="topbar-left">
+                    <button class="btn-menu-toggle" id="btn-menu-toggle" aria-label="Toggle sidebar">☰</button>
+                    <span class="chat-title" id="chat-title">New Faceoff</span>
+                </div>
+                <div class="topbar-right">
+                    <div class="mode-switcher" id="mode-switcher">
+                        <a href="/chat" class="mode-switch-btn mode-switch-active" id="mode-btn-talk">
+                            <span>💬</span> Talk
+                        </a>
+                        <a href="/eval" class="mode-switch-btn" id="mode-btn-eval">
+                            <span>📊</span> Eval
+                        </a>
+                    </div>
+                    <button class="btn-clear-chat" id="btn-clear-chat" title="Clear current chat">🗑 Clear</button>
+                </div>
+            </div>
+
+            <!-- Model Selection Bar -->
+            <div class="model-bar" id="model-bar">
+                <div class="model-bar-inner">
+                    <div class="model-slot" id="model-slot-0">
+                        <div class="model-slot-header">
+                            <span class="model-slot-label">Model A</span>
+                            <span class="model-type-badge badge-frontier" id="badge-0" style="display:none;"></span>
+                            <span id="warning-0" style="display:none; margin-left: auto; font-size: 0.65rem; color: var(--accent-amber); font-weight: 600; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">⚠️ Model loading on local GPU/RAM (serverless), first request may take a moment.</span>
+                        </div>
+                        <select class="model-selector" id="model-select-0" aria-label="Select Model A">
+                            <option value="" disabled selected>Loading…</option>
+                        </select>
+                    </div>
+                    <div class="model-vs">VS</div>
+                    <div class="model-slot" id="model-slot-1">
+                        <div class="model-slot-header">
+                            <span class="model-slot-label">Model B</span>
+                            <span class="model-type-badge badge-oss" id="badge-1" style="display:none;"></span>
+                                    <span id="warning-1" style="display:none; margin-left: auto; font-size: 0.65rem; color: var(--accent-amber); font-weight: 600; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">⚠️ Model loading on local GPU/RAM (serverless), first request may take a moment.</span>
+                                </div>
+                        <select class="model-selector" id="model-select-1" aria-label="Select Model B">
+                            <option value="" disabled selected>Loading…</option>
+                        </select>
+                    </div>
+                    <div class="model-slot model-slot-optional" id="model-slot-2" style="display:none;">
+                        <div class="model-slot-header">
+                            <span class="model-slot-label">Model C</span>
+                            <span class="model-type-badge" id="badge-2" style="display:none;"></span>
+                            <span id="warning-2" style="display:none; margin-left: auto; font-size: 0.65rem; color: var(--accent-amber); font-weight: 600; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">⚠️ Model loading on local GPU/RAM (serverless), first request may take a moment.</span>
+                            <button class="btn-remove-model" id="btn-remove-model-c" title="Remove Model C">✕</button>
+                        </div>
+                        <select class="model-selector" id="model-select-2" aria-label="Select Model C">
+                            <option value="" disabled selected>Loading…</option>
+                        </select>
+                    </div>
+                    <button class="btn-add-model" id="btn-add-model" title="Add a third model">＋ Add Model</button>
+                </div>
+            </div>
+
+            <!-- Chat Panels Container -->
+            <div class="chat-panels" id="chat-panels">
+                <!-- Welcome screen (shown when no messages) -->
+                <div class="welcome-screen" id="welcome-screen">
+                    <div class="welcome-icon">⚔️</div>
+                    <h2>Compare AI Assistants</h2>
+                    <p>Select a <strong>Frontier model</strong> and an <strong>Open-Source model</strong> above, then send a message. Both will respond side by side so you can compare quality, speed, and safety.</p>
+                    <div class="welcome-chips">
+                        <div class="welcome-chip" data-prompt="Explain quantum computing in simple terms">Quantum computing 101</div>
+                        <div class="welcome-chip" data-prompt="Write a Python function to find prime numbers">Code a prime finder</div>
+                        <div class="welcome-chip" data-prompt="What are the pros and cons of remote work?">Debate remote work</div>
+                        <div class="welcome-chip" data-prompt="Tell me a creative story about a time-traveling cat">Creative story time</div>
+                    </div>
+                </div>
+
+                <!-- Panels are dynamically created -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input" id="chat-input" placeholder="Send the same message to all models…" rows="1" aria-label="Chat message input"></textarea>
+                    <button class="btn-send" id="btn-send" aria-label="Send message">
+                        <span id="send-icon">➤</span>
+                        <div class="spinner" id="send-spinner" style="display:none;"></div>
+                    </button>
+                </div>
+                <div class="input-hint">Same prompt → multiple models → side-by-side comparison</div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        // ===================== AUTH GUARD =====================
+        const currentUser = sessionStorage.getItem('llm_user');
+        if (!currentUser) { window.location.href = '/'; return; }
+
+        // ===================== UTILS =====================
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // ===================== DOM REFS =====================
+        const sidebar         = document.getElementById('sidebar');
+        const sidebarOverlay  = document.getElementById('sidebar-overlay');
+        const sidebarChats    = document.getElementById('sidebar-chats');
+        const btnMenuToggle   = document.getElementById('btn-menu-toggle');
+        const btnNewChat      = document.getElementById('btn-new-chat');
+        const btnLogout       = document.getElementById('btn-logout');
+        const btnClearChat    = document.getElementById('btn-clear-chat');
+        const btnAddModel     = document.getElementById('btn-add-model');
+        const btnRemoveModelC = document.getElementById('btn-remove-model-c');
+        const modelSlot2      = document.getElementById('model-slot-2');
+        const userName        = document.getElementById('user-name');
+        const userAvatar      = document.getElementById('user-avatar');
+        const chatTitle       = document.getElementById('chat-title');
+        const chatPanels      = document.getElementById('chat-panels');
+        const welcomeScreen   = document.getElementById('welcome-screen');
+        const chatInput       = document.getElementById('chat-input');
+        const btnSend         = document.getElementById('btn-send');
+        const sendIcon        = document.getElementById('send-icon');
+        const sendSpinner     = document.getElementById('send-spinner');
+
+        const API_BASE = window.location.origin;
+        const MAX_MODELS = 3;
+
+        // ===================== STATE =====================
+        let modelCount = 2; // 2 or 3 active panels
+        let conversations = [];
+        let activeConversationId = null;
+        let isGenerating = false;
+        let allModelsData = {}; // raw from API
+
+        // ===================== INIT =====================
+        userName.textContent = currentUser;
+        userAvatar.textContent = currentUser.charAt(0).toUpperCase();
+
+        // ---- Fetch & Populate Models ----
+        async function fetchModels() {
+            try {
+                const res = await fetch(`${API_BASE}/api/models`);
+                allModelsData = await res.json();
+                populateAllSelectors();
+            } catch (err) {
+                console.error('Failed to fetch models:', err);
+                for (let i = 0; i < MAX_MODELS; i++) {
+                    const sel = document.getElementById(`model-select-${i}`);
+                    sel.innerHTML = '<option disabled>Error loading</option>';
+                }
+            }
+        }
+
+        function populateAllSelectors() {
+            const groupMapping = {
+                "api_gemini":     "🌐 Frontier — Gemini",
+                "api_groq":       "🌐 Frontier — Groq",
+                "oss_serverless": "🟢 OSS — Serverless (Modal)",
+                "oss_local":      "🟢 OSS — Local (HuggingFace)"
+            };
+
+            // Preferred defaults: slot 0 = first frontier, slot 1 = first OSS
+            const frontierModels = [
+                ...(allModelsData.api_gemini || []),
+                ...(allModelsData.api_groq || [])
+            ];
+            const ossModels = [
+                ...(allModelsData.oss_serverless || []),
+                ...(allModelsData.oss_local || [])
+            ];
+
+            for (let i = 0; i < MAX_MODELS; i++) {
+                const sel = document.getElementById(`model-select-${i}`);
+                sel.innerHTML = '';
+
+                for (const [key, models] of Object.entries(allModelsData)) {
+                    if (models && models.length > 0) {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = groupMapping[key] || key;
+                        models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model;
+                            option.textContent = model;
+                            optgroup.appendChild(option);
+                        });
+                        sel.appendChild(optgroup);
+                    }
+                }
+
+                // Set smart defaults
+                if (i === 0 && frontierModels.length > 0) {
+                    sel.value = frontierModels[0];
+                } else if (i === 1 && ossModels.length > 0) {
+                    sel.value = ossModels[0];
+                } else if (i === 2) {
+                    // Pick a different one
+                    if (ossModels.length > 1) sel.value = ossModels[1];
+                    else if (frontierModels.length > 1) sel.value = frontierModels[1];
+                }
+
+                updateBadge(i);
+                sel.addEventListener('change', () => updateBadge(i));
+            }
+        }
+
+        function updateBadge(idx) {
+            const sel = document.getElementById(`model-select-${idx}`);
+            const badge = document.getElementById(`badge-${idx}`);
+            const warning = document.getElementById(`warning-${idx}`);
+            if (!sel.selectedOptions.length || !badge) return;
+            const group = sel.selectedOptions[0]?.parentElement?.label || '';
+            if (group.includes('Frontier')) {
+                badge.textContent = 'Frontier';
+                badge.className = 'model-type-badge badge-frontier';
+                badge.style.display = 'inline-block';
+                if (warning) warning.style.display = 'none';
+            } else if (group.includes('OSS')) {
+                badge.textContent = 'OSS';
+                badge.className = 'model-type-badge badge-oss';
+                badge.style.display = 'inline-block';
+                if (warning) warning.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+                if (warning) warning.style.display = 'none';
+            }
+        }
+
+        // ---- Add / Remove 3rd model ----
+        btnAddModel.addEventListener('click', () => {
+            modelCount = 3;
+            modelSlot2.style.display = 'flex';
+            btnAddModel.style.display = 'none';
+            updateBadge(2);
+            renderPanels();
+        });
+
+        btnRemoveModelC.addEventListener('click', () => {
+            modelCount = 2;
+            modelSlot2.style.display = 'none';
+            btnAddModel.style.display = 'inline-flex';
+            renderPanels();
+        });
+
+        // ===================== CONVERSATIONS =====================
+
+        function getActiveModels() {
+            const models = [];
+            for (let i = 0; i < modelCount; i++) {
+                const sel = document.getElementById(`model-select-${i}`);
+                models.push(sel.value || `model-${i}`);
+            }
+            return models;
+        }
+
+        function createNewConversation() {
+            const id = generateUUID();
+            const conv = {
+                id,
+                title: 'New Faceoff',
+                // messages is keyed by model name; each is an array of {role, content}
+                threads: {},
+                threadChatIds: {},  // maps model name -> UUID for DB chat_id
+                sharedUserMessages: []  // ordered user messages
+            };
+            conversations.unshift(conv);
+            activeConversationId = id;
+            renderSidebar();
+            renderPanels();
+            chatInput.focus();
+        }
+
+        function switchConversation(id) {
+            activeConversationId = id;
+            renderSidebar();
+            renderPanels();
+            closeSidebarMobile();
+        }
+
+        function getActiveConversation() {
+            return conversations.find(c => c.id === activeConversationId) || null;
+        }
+
+        function generateTitle(text) {
+            const clean = text.replace(/\n/g, ' ').trim();
+            return clean.length > 40 ? clean.substring(0, 40) + '…' : clean;
+        }
+
+        // ===================== RENDER =====================
+
+        function renderSidebar() {
+            const label = document.createElement('div');
+            label.className = 'sidebar-section-label';
+            label.textContent = 'Faceoff History';
+            sidebarChats.innerHTML = '';
+            sidebarChats.appendChild(label);
+
+            if (conversations.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'padding: 1rem 0.75rem; font-size: 0.82rem; color: var(--text-muted); text-align: center;';
+                empty.textContent = 'No faceoffs yet. Start one!';
+                sidebarChats.appendChild(empty);
+                return;
+            }
+
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.className = 'chat-history-item' + (conv.id === activeConversationId ? ' active' : '');
+                item.innerHTML = `
+                    <span class="chat-item-icon">⚔️</span>
+                    <span class="chat-item-text">${escapeHTML(conv.title)}</span>
+                `;
+                item.addEventListener('click', () => switchConversation(conv.id));
+                sidebarChats.appendChild(item);
+            });
+        }
+
+        function renderPanels() {
+            const conv = getActiveConversation();
+            const models = getActiveModels();
+
+            // Remove old panels
+            chatPanels.querySelectorAll('.chat-panel').forEach(p => p.remove());
+
+            if (!conv || (conv.sharedUserMessages.length === 0 && !conv.isHistory)) {
+                welcomeScreen.style.display = 'flex';
+                chatTitle.textContent = 'New Faceoff';
+                return;
+            }
+
+            welcomeScreen.style.display = 'none';
+            chatTitle.textContent = conv.title;
+
+            // If this is a history conversation loaded from DB, render in a single panel
+            if (conv.isHistory && conv.historyMessages) {
+                const panel = createHistoryPanelElement();
+                const messagesContainer = panel.querySelector('.panel-messages');
+                conv.historyMessages.forEach(msg => {
+                    appendPanelMessage(messagesContainer, msg.role, msg.content, false);
+                });
+                chatPanels.appendChild(panel);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                return;
+            }
+
+            // Create a panel for each model
+            models.forEach((model, idx) => {
+                const panel = createPanelElement(model, idx);
+                const messagesContainer = panel.querySelector('.panel-messages');
+
+                const thread = conv.threads[model] || [];
+                thread.forEach(msg => {
+                    appendPanelMessage(messagesContainer, msg.role, msg.content, false);
+                });
+
+                chatPanels.appendChild(panel);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        }
+
+        function createPanelElement(model, idx) {
+            const panel = document.createElement('div');
+            panel.className = 'chat-panel';
+            panel.id = `panel-${idx}`;
+
+            // Determine badge
+            const sel = document.getElementById(`model-select-${idx}`);
+            const group = sel?.selectedOptions[0]?.parentElement?.label || '';
+            let badgeHTML = '';
+            let warningHTML = '';
+            if (group.includes('Frontier')) {
+                badgeHTML = '<span class="model-type-badge badge-frontier">Frontier</span>';
+            } else if (group.includes('OSS')) {
+                badgeHTML = '<span class="model-type-badge badge-oss">OSS</span>';
+                warningHTML = '<span style="margin-left: auto; font-size: 0.65rem; color: var(--accent-amber); font-weight: 600; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">⚠️ Model loading on local GPU/RAM (serverless), first request may take a moment.</span>';
+            }
+
+            panel.innerHTML = `
+                <div class="panel-header">
+                    <span class="panel-model-name">${escapeHTML(model)}</span>
+                    ${badgeHTML}
+                    ${warningHTML}
+                </div>
+                <div class="panel-messages" id="panel-messages-${idx}"></div>
+            `;
+            return panel;
+        }
+
+        function createHistoryPanelElement() {
+            const panel = document.createElement('div');
+            panel.className = 'chat-panel';
+            panel.id = 'panel-history';
+            panel.style.flex = '1';
+            panel.innerHTML = `
+                <div class="panel-header">
+                    <span class="panel-model-name">Chat History</span>
+                    <span class="model-type-badge" style="background:rgba(99,102,241,0.15);color:var(--accent-blue);border:1px solid rgba(99,102,241,0.25);">Saved</span>
+                </div>
+                <div class="panel-messages" id="panel-messages-history"></div>
+            `;
+            return panel;
+        }
+
+        // ---- Markdown Rendering ----
+        function renderMarkdown(text) {
+            if (!text) return '';
+            try {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    highlight: function(code, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            return hljs.highlight(code, { language: lang }).value;
+                        }
+                        return hljs.highlightAuto(code).value;
+                    }
+                });
+                return marked.parse(text);
+            } catch (e) {
+                // Fallback to escaped text
+                return escapeHTML(text);
+            }
+        }
+
+        function appendPanelMessage(container, role, content, animate = true) {
+            const row = document.createElement('div');
+            row.className = `message-row ${role === 'user' ? 'user-row' : 'ai-row'}`;
+            if (!animate) row.style.animation = 'none';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? currentUser.charAt(0).toUpperCase() : '✦';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+
+            if (role === 'user') {
+                bubble.textContent = content;
+            } else {
+                bubble.classList.add('md-content');
+                bubble.innerHTML = renderMarkdown(content);
+            }
+
+            row.appendChild(avatar);
+            row.appendChild(bubble);
+            container.appendChild(row);
+            return bubble;
+        }
+
+        function showPanelTyping(container) {
+            const row = document.createElement('div');
+            row.className = 'message-row ai-row typing-row-indicator';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = '✦';
+
+            const indicator = document.createElement('div');
+            indicator.className = 'message-bubble typing-indicator';
+            indicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+
+            row.appendChild(avatar);
+            row.appendChild(indicator);
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+            return row;
+        }
+
+        function escapeHTML(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===================== SEND MESSAGE =====================
+
+        async function sendMessage(text) {
+            text = (text || '').trim();
+            if (!text || isGenerating) return;
+
+            if (!activeConversationId) createNewConversation();
+            const conv = getActiveConversation();
+            if (!conv) return;
+
+            const models = getActiveModels();
+
+            // Update title on first message
+            if (conv.sharedUserMessages.length === 0) {
+                conv.title = generateTitle(text);
+                renderSidebar();
+            }
+
+            conv.sharedUserMessages.push(text);
+
+            // Initialize threads if needed & add user message
+            models.forEach(model => {
+                if (!conv.threads[model]) conv.threads[model] = [];
+                if (!conv.threadChatIds[model]) conv.threadChatIds[model] = generateUUID();
+                conv.threads[model].push({ role: 'user', content: text });
+            });
+
+            // Clear input
+            chatInput.value = '';
+            autoResizeTextarea();
+
+            // Hide welcome, show panels
+            welcomeScreen.style.display = 'none';
+            chatTitle.textContent = conv.title;
+
+            // Ensure panels exist
+            models.forEach((model, idx) => {
+                let panel = document.getElementById(`panel-${idx}`);
+                if (!panel) {
+                    panel = createPanelElement(model, idx);
+                    chatPanels.appendChild(panel);
+                }
+                const container = document.getElementById(`panel-messages-${idx}`);
+                // Add user message bubble
+                appendPanelMessage(container, 'user', text, true);
+                container.scrollTop = container.scrollHeight;
+            });
+
+            // Disable input
+            isGenerating = true;
+            setInputLoading(true);
+
+            // Fire all model requests in parallel
+            const promises = models.map((model, idx) => {
+                return streamModelResponse(conv, model, idx);
+            });
+
+            await Promise.allSettled(promises);
+
+            isGenerating = false;
+            setInputLoading(false);
+            chatInput.focus();
+
+            // Save to backend and update long-term memory (fire and forget)
+            try {
+                // Save each model's response to the database
+                models.forEach(model => {
+                    const thread = conv.threads[model] || [];
+                    const lastAI = thread.filter(m => m.role === 'assistant').pop();
+                    if (lastAI) {
+                        fetch(`${API_BASE}/api/chats/save`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: currentUser,
+                                chat_id: conv.threadChatIds[model],
+                                user_message: text,
+                                ai_message: lastAI.content
+                            })
+                        });
+                    }
+                });
+
+                // Extract and save long-term memory from the first model's exchange
+                const firstModel = models[0];
+                const firstThread = conv.threads[firstModel] || [];
+                const lastAI = firstThread.filter(m => m.role === 'assistant').pop();
+                if (lastAI) {
+                    fetch(`${API_BASE}/api/memory/update`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: currentUser,
+                            user_message: text,
+                            ai_message: lastAI.content
+                        })
+                    }).then(res => res.json()).then(data => {
+                        if (data.success && data.memory && data.memory.length > 0) {
+                            updateMemoryIndicator(data.memory.length);
+                        }
+                    }).catch(() => {});
+                }
+            } catch (_) {}
+        }
+
+        async function streamModelResponse(conv, model, panelIdx) {
+            const container = document.getElementById(`panel-messages-${panelIdx}`);
+
+            // Show appropriate loading indicator
+            let loadingRow = showPanelTyping(container);
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: model,
+                        user_id: currentUser,
+                        messages: conv.threads[model]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`${response.status} ${response.statusText}`);
+                }
+
+                // Remove loading indicator, add AI bubble
+                loadingRow.remove();
+                const aiBubble = appendPanelMessage(container, 'assistant', '', true);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let fullText = '';
+                let renderTimer = null;
+
+                function updateMarkdown() {
+                    aiBubble.innerHTML = renderMarkdown(fullText);
+                    container.scrollTop = container.scrollHeight;
+                }
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    // Throttle markdown re-renders during streaming for performance
+                    if (!renderTimer) {
+                        renderTimer = setTimeout(() => {
+                            updateMarkdown();
+                            renderTimer = null;
+                        }, 80);
+                    }
+                }
+                // Final render to ensure completeness
+                if (renderTimer) { clearTimeout(renderTimer); }
+                updateMarkdown();
+
+                const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+
+                // Show inference time badge below the message
+                const timeTag = document.createElement('div');
+                timeTag.className = 'inference-time';
+                timeTag.textContent = `⏱ ${elapsed}s`;
+                aiBubble.parentElement.appendChild(timeTag);
+                container.scrollTop = container.scrollHeight;
+
+                conv.threads[model].push({ role: 'assistant', content: fullText });
+
+            } catch (err) {
+                console.error(`Error with ${model}:`, err);
+                loadingRow.remove();
+                appendPanelMessage(container, 'assistant', `⚠ Error: ${err.message}`, true);
+                // Remove the failed user message from this thread
+                const thread = conv.threads[model];
+                if (thread.length > 0 && thread[thread.length - 1].role === 'user') {
+                    thread.pop();
+                }
+            }
+        }
+
+        function setInputLoading(loading) {
+            btnSend.disabled = loading;
+            chatInput.disabled = loading;
+            sendIcon.style.display = loading ? 'none' : 'inline';
+            sendSpinner.style.display = loading ? 'block' : 'none';
+        }
+
+        // ===================== TEXTAREA AUTO-RESIZE =====================
+        function autoResizeTextarea() {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+        }
+        chatInput.addEventListener('input', autoResizeTextarea);
+
+        // ===================== EVENT LISTENERS =====================
+
+        btnSend.addEventListener('click', () => sendMessage(chatInput.value));
+
+        chatInput.addEventListener('keydown', (e) => {
+            if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(chatInput.value);
+            }
+        });
+
+        btnNewChat.addEventListener('click', () => {
+            createNewConversation();
+            closeSidebarMobile();
+        });
+
+        btnClearChat.addEventListener('click', () => {
+            const conv = getActiveConversation();
+            if (conv) {
+                conv.threads = {};
+                conv.sharedUserMessages = [];
+                conv.title = 'New Faceoff';
+            }
+            renderPanels();
+            renderSidebar();
+        });
+
+        document.querySelectorAll('.welcome-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const prompt = chip.getAttribute('data-prompt');
+                if (prompt) sendMessage(prompt);
+            });
+        });
+
+        btnLogout.addEventListener('click', () => {
+            sessionStorage.removeItem('llm_user');
+            window.location.href = '/';
+        });
+
+        btnMenuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('visible');
+        });
+        sidebarOverlay.addEventListener('click', closeSidebarMobile);
+
+        function closeSidebarMobile() {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('visible');
+        }
+
+        // ===================== MEMORY =====================
+        function updateMemoryIndicator(count) {
+            const el = document.getElementById('memory-count');
+            if (el) el.textContent = `${count} fact${count !== 1 ? 's' : ''}`;
+        }
+
+        async function loadMemory() {
+            try {
+                const res = await fetch(`${API_BASE}/api/memory/${encodeURIComponent(currentUser)}`);
+                const data = await res.json();
+                if (data.success && data.memory) {
+                    updateMemoryIndicator(data.memory.length);
+                }
+            } catch (_) {}
+        }
+
+        // ===================== LOAD CHAT HISTORY =====================
+        async function loadChatHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/api/chats/${encodeURIComponent(currentUser)}`);
+                const data = await res.json();
+                if (data.success && data.chats && data.chats.length > 0) {
+                    // Convert each DB row into a conversation object
+                    data.chats.forEach(row => {
+                        const chatMessages = row.chat || [];
+                        const firstUserMsg = chatMessages.find(m => m.role === 'user');
+                        const title = firstUserMsg ? generateTitle(firstUserMsg.content) : 'Past Chat';
+                        const conv = {
+                            id: row.chat_id || row.generation_id || ('hist-' + Date.now() + Math.random()),
+                            title: title,
+                            threads: {},
+                            sharedUserMessages: chatMessages.filter(m => m.role === 'user').map(m => m.content),
+                            isHistory: true,
+                            historyMessages: chatMessages
+                        };
+                        conversations.push(conv);
+                    });
+                    renderSidebar();
+                }
+            } catch (err) {
+                console.error('Failed to load chat history:', err);
+            }
+        }
+
+        // ===================== BOOT =====================
+        fetchModels();
+        loadMemory();
+        createNewConversation();
+        loadChatHistory();
+
+    })();
+    </script>
+</body>
+</html>
